@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuarios Extensible</title>
+    <!-- Fonts: Google Fonts (Outfit) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Capa decorativa de fondo con esferas brillantes de degradado -->
+    <div class="background-decorations">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+    
+    <div class="app-container">
+        <!-- Sección Izquierda: Formulario de Registro -->
+        <main class="card-section">
+            <div class="glass-card registration-card">
+                <div class="card-header">
+                    <div class="icon-badge">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h1>Crear Cuenta</h1>
+                    <p class="subtitle">Registra un nuevo usuario en el sistema</p>
+                </div>
+                
+                <form id="registration-form" novalidate>
+                    <!-- JavaScript renderizará los campos dinámicamente aquí -->
+                    <div id="dynamic-fields-container" class="fields-grid"></div>
+                    
+                    <button type="submit" id="submit-btn" class="submit-btn">
+                        <span id="btn-text">Registrar Usuario</span>
+                        <i id="btn-icon" class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+                
+                <div id="form-message" class="form-message-banner hidden"></div>
+            </div>
+        </main>
+        
+        <!-- Sección Derecha: Visualizador de Base de Datos -->
+        <section class="dashboard-section">
+            <div class="glass-card users-card">
+                <div class="card-header">
+                    <div class="icon-badge alt">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <h2>Tabla de Usuarios</h2>
+                    <p class="subtitle">Visualización en tiempo real de la tabla de PostgreSQL</p>
+                </div>
+                
+                <div class="users-table-wrapper">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre Completo</th>
+                                <th>Edad</th>
+                                <th>Correo</th>
+                                <th>Datos Dinámicos (JSONB)</th>
+                                <th>Fecha de Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr class="loading-state">
+                                <td colspan="6">
+                                    <div class="table-spinner">
+                                        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando usuarios...
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
