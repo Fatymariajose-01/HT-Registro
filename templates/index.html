@@ -65,13 +65,14 @@
                                 <th>Nombre Completo</th>
                                 <th>Edad</th>
                                 <th>Correo</th>
+                                <th>Estado</th>
                                 <th>Datos Dinámicos (JSONB)</th>
                                 <th>Fecha de Registro</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body">
                             <tr class="loading-state">
-                                <td colspan="6">
+                                <td colspan="7">
                                     <div class="table-spinner">
                                         <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando usuarios...
                                     </div>
@@ -85,6 +86,14 @@
     </div>
     
     <!-- Scripts -->
+    {% if verification_status %}
+    <script>
+        window.verificationAlert = {
+            status: "{{ verification_status }}",
+            message: "{{ verification_message }}"
+        };
+    </script>
+    {% endif %}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

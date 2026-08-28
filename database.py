@@ -1,5 +1,6 @@
 import json
 import psycopg2
+import uuid
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import generate_password_hash
 from config import Config
@@ -64,12 +65,23 @@ def init_db():
                 age INTEGER NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 extra_data JSONB DEFAULT '{}'::jsonb,
+                is_verified BOOLEAN DEFAULT FALSE,
+                verification_token VARCHAR(255) UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """
             cursor.execute(create_table_query)
+            
+            # Asegurar que las columnas nuevas existan si la tabla ya había sido creada anteriormente
+            alter_queries = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255) UNIQUE;"
+            ]
+            for query in alter_queries:
+                cursor.execute(query)
+                
             conn.commit()
-            print("Tabla 'users' verificada/creada exitosamente.")
+            print("Tabla 'users' verificada/creada exitosamente con soporte para validación.")
     except Exception as e:
         print(f"Error crítico al inicializar la tabla 'users': {e}")
         raise e
@@ -77,10 +89,10 @@ def init_db():
         if conn:
             conn.close()
 
-def save_user(form_data, registered_fields) -> tuple[bool, str]:
+def save_user(form_data, registered_fields) -> tuple[bool, str, str | None]:
     """
     Guarda un usuario clasificando campos core y adicionales.
-    Cifra la contraseña de manera segura.
+    Cifra la contraseña de manera segura y genera un token de validación.
     """
     # Definir campos fijos en la tabla
     core_keys = {"email", "name", "last_name", "age", "password"}
@@ -93,9 +105,12 @@ def save_user(form_data, registered_fields) -> tuple[bool, str]:
     try:
         age = int(form_data.get("age"))
     except (ValueError, TypeError):
-        return False, "La edad debe ser un número válido."
+        return False, "La edad debe ser un número válido.", None
         
     password_hash = generate_password_hash(form_data.get("password"))
+    
+    # Generar token de verificación único
+    verification_token = uuid.uuid4().hex
     
     # Extraer campos personalizados (que no sean parte de las columnas físicas)
     extra_data = {}
@@ -108,8 +123,8 @@ def save_user(form_data, registered_fields) -> tuple[bool, str]:
         conn = get_connection()
         with conn.cursor() as cursor:
             insert_query = """
-            INSERT INTO users (email, name, last_name, age, password, extra_data)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO users (email, name, last_name, age, password, extra_data, verification_token)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id;
             """
             cursor.execute(insert_query, (
@@ -118,19 +133,20 @@ def save_user(form_data, registered_fields) -> tuple[bool, str]:
                 last_name,
                 age,
                 password_hash,
-                json.dumps(extra_data)
+                json.dumps(extra_data),
+                verification_token
             ))
             user_id = cursor.fetchone()[0]
             conn.commit()
-            return True, f"Usuario registrado exitosamente con ID: {user_id}."
+            return True, f"Usuario registrado exitosamente con ID: {user_id}. Se ha enviado un correo de verificación.", verification_token
     except psycopg2.errors.UniqueViolation:
         if conn:
             conn.rollback()
-        return False, "El correo electrónico ya se encuentra registrado."
+        return False, "El correo electrónico ya se encuentra registrado.", None
     except Exception as e:
         if conn:
             conn.rollback()
-        return False, f"Error en base de datos al guardar usuario: {str(e)}"
+        return False, f"Error en base de datos al guardar usuario: {str(e)}", None
     finally:
         if conn:
             conn.close()
@@ -141,7 +157,7 @@ def get_all_users() -> list[dict]:
     try:
         conn = get_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT id, email, name, last_name, age, extra_data, created_at FROM users ORDER BY created_at DESC;")
+            cursor.execute("SELECT id, email, name, last_name, age, extra_data, is_verified, created_at FROM users ORDER BY created_at DESC;")
             records = cursor.fetchall()
             # Convertir objetos datetime a strings legibles
             for rec in records:
@@ -151,6 +167,37 @@ def get_all_users() -> list[dict]:
     except Exception as e:
         print(f"Error al recuperar usuarios: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
+
+def verify_user_token(token: str) -> tuple[bool, str]:
+    """
+    Verifica un usuario buscando su token de verificación.
+    Si lo encuentra, cambia is_verified a True.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            # Buscar si el token existe
+            cursor.execute("SELECT id, email, is_verified FROM users WHERE verification_token = %s;", (token,))
+            row = cursor.fetchone()
+            if not row:
+                return False, "Token de verificación inválido o vencido."
+            
+            user_id, email, is_verified = row
+            if is_verified:
+                return True, "Esta cuenta ya ha sido verificada anteriormente."
+            
+            # Actualizar is_verified a True
+            cursor.execute("UPDATE users SET is_verified = True WHERE id = %s;", (user_id,))
+            conn.commit()
+            return True, "Cuenta verificada con éxito. ¡Ya puedes usar tu cuenta!"
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return False, f"Error en base de datos al verificar cuenta: {str(e)}"
     finally:
         if conn:
             conn.close()

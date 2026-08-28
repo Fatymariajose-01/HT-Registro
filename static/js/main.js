@@ -65,6 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function init() {
         await loadFormSchema();
         loadUsersTable();
+        
+        // Mostrar alerta de verificación si viene desde el servidor
+        if (window.verificationAlert) {
+            showBanner(window.verificationAlert.message, window.verificationAlert.status);
+            // Limpiar la alerta para evitar repetir el mensaje al recargar
+            window.verificationAlert = null;
+        }
     }
 
     // ==========================================================================
@@ -306,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error al cargar tabla de usuarios:', error);
             usersTableBody.innerHTML = `
                 <tr class="empty-state">
-                    <td colspan="6" style="color: var(--error-color)">
+                    <td colspan="7" style="color: var(--error-color)">
                         <i class="fa-solid fa-triangle-exclamation"></i> Error al conectar con PostgreSQL
                     </td>
                 </tr>
@@ -320,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (users.length === 0) {
             usersTableBody.innerHTML = `
                 <tr class="empty-state">
-                    <td colspan="6">
+                    <td colspan="7">
                         <div class="empty-message">
                             <i class="fa-solid fa-folder-open"></i>
                             <span>No hay usuarios registrados aún.</span>
@@ -352,11 +359,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 extraDataHtml = '<span class="json-badge empty">Ninguno</span>';
             }
 
+            // Construir el badge de estado de verificación
+            const statusHtml = user.is_verified 
+                ? `<span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> Verificado</span>`
+                : `<span class="status-badge pending"><i class="fa-solid fa-clock"></i> Pendiente</span>`;
+
             tr.innerHTML = `
                 <td><span class="user-id-badge">${user.id}</span></td>
                 <td style="font-weight: 500; color: var(--text-primary);">${user.name} ${user.last_name}</td>
                 <td>${user.age}</td>
                 <td>${user.email}</td>
+                <td>${statusHtml}</td>
                 <td>${extraDataHtml}</td>
                 <td style="font-size: 0.8rem; white-space: nowrap;">${user.created_at}</td>
             `;
