@@ -1,6 +1,6 @@
 # Formulario de Registro de Usuarios Extensible (Python + Flask + PostgreSQL)
 
-Este es un proyecto web con diseño de interfaz moderno (Glassmorphism, Dark Mode) y arquitectura extensible siguiendo el principio de software **Open/Closed** (Abierto para extensión, Cerrado para modificación).
+Este es un proyecto web con diseño de interfaz moderno (Glassmorphism, Dark Mode) y arquitectura extensible siguiendo el principio de software **Open/Closed**.
 
 El formulario de registro valida y guarda campos obligatorios en columnas específicas de la base de datos y permite agregar nuevos campos adicionales dinámicamente sin modificar clases core, archivos de frontend ni esquemas de base de datos SQL.
 
