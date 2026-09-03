@@ -38,8 +38,8 @@ class AgeField(FormField):
     def validate(self, value) -> tuple[bool, str]:
         try:
             val_int = int(value)
-            if val_int < 0 or val_int > 120:
-                return False, "La edad debe ser un número entre 0 y 120."
+            if val_int < 18 or val_int > 100:
+                return False, "Debe ser mayor de 18 años pero menor de 100."
             return True, ""
         except ValueError:
             return False, "La edad debe ser un número entero válido."
@@ -58,20 +58,23 @@ class EmailField(FormField):
             return False, "El formato del correo electrónico no es válido."
         return True, ""
 
+
 class PasswordField(FormField):
     order = 5
     name = "password"
     label = "Contraseña"
     field_type = "password"
-    
+
     def validate(self, value) -> tuple[bool, str]:
         val_str = str(value)
-        if len(val_str) < 8:
-            return False, "La contraseña debe tener al menos 8 caracteres."
+        if len(val_str) < 10:
+            return False, "La contraseña debe tener al menos 10 caracteres."
         if not any(char.isdigit() for char in val_str):
             return False, "La contraseña debe contener al menos un número."
         if not any(char.isupper() for char in val_str):
             return False, "La contraseña debe contener al menos una letra mayúscula."
         if not any(char.islower() for char in val_str):
             return False, "La contraseña debe contener al menos una letra minúscula."
+        if not any(char in "!@#$%^&*()-_=+[]{}|;:,.<>?" for char in val_str):
+            return False, "La contraseña debe contener al menos un carácter especial."
         return True, ""

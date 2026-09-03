@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         age: (value) => {
             const val = parseInt(value, 10);
-            if (isNaN(val) || val < 0 || val > 120) return "La edad debe ser un número entero entre 0 y 120.";
+            if (isNaN(val) || val < 18 || val > 100) return "Debes ser mayor de 18 años (máximo 100 años).";
             return "";
         },
         email: (value) => {
@@ -37,10 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return "";
         },
         password: (value) => {
-            if (value.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+            if (value.length < 10) return "La contraseña debe tener al menos 10 caracteres.";
             if (!/\d/.test(value)) return "La contraseña debe contener al menos un número.";
             if (!/[A-Z]/.test(value)) return "La contraseña debe contener al menos una letra mayúscula.";
             if (!/[a-z]/.test(value)) return "La contraseña debe contener al menos una letra minúscula.";
+            if (!/[!@#$%^&*()-_=+[\]{}|;:,.<>?]/.test(value)) return "La contraseña debe contener al menos un carácter especial.";
             return "";
         },
         // Validador por defecto para cualquier campo dinámico adicional
@@ -65,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function init() {
         await loadFormSchema();
         loadUsersTable();
-        
+
         // Mostrar alerta de verificación si viene desde el servidor
         if (window.verificationAlert) {
             showBanner(window.verificationAlert.message, window.verificationAlert.status);
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/schema');
             if (!response.ok) throw new Error('No se pudo obtener el esquema del formulario.');
-            
+
             formSchema = await response.json();
             renderForm(formSchema);
         } catch (error) {
@@ -92,28 +93,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderForm(fields) {
         fieldsContainer.innerHTML = '';
-        
+
         fields.forEach(field => {
             const group = document.createElement('div');
             group.className = 'input-group';
             group.id = `group-${field.name}`;
-            
+
             // Placeholder amigable
             let placeholder = `Ingresa tu ${field.label.toLowerCase()}`;
             if (field.field_type === 'password') placeholder = '••••••••';
             if (field.field_type === 'email') placeholder = 'ejemplo@correo.com';
-            
+
             group.innerHTML = `
                 <label class="input-label" for="input-${field.name}">
                     <span>${field.label}</span>
                     ${field.required ? '<span class="req">*</span>' : ''}
                 </label>
                 <div class="input-wrapper">
-                    <input 
-                        type="${field.field_type}" 
-                        id="input-${field.name}" 
-                        name="${field.name}" 
-                        class="form-input" 
+                    <input
+                        type="${field.field_type}"
+                        id="input-${field.name}"
+                        name="${field.name}"
+                        class="form-input"
                         placeholder="${placeholder}"
                         ${field.required ? 'required' : ''}
                     >
@@ -121,9 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="error-msg" id="error-${field.name}">Mensaje de error</div>
             `;
-            
+
             fieldsContainer.appendChild(group);
-            
+
             // Agregar event listeners para validación en tiempo real
             const inputEl = group.querySelector('.form-input');
             inputEl.addEventListener('input', () => validateInput(inputEl, field));
@@ -135,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function validateInput(inputEl, fieldSchema) {
         const value = inputEl.value;
         const validator = clientValidators[fieldSchema.name] || clientValidators.default;
-        
+
         // Obtener el mensaje de error (vacío si es válido)
         const errorMsg = validator(value, fieldSchema);
         const errorDiv = document.getElementById(`error-${fieldSchema.name}`);
@@ -146,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inputEl.classList.add('invalid');
             errorDiv.textContent = errorMsg;
             errorDiv.classList.add('visible');
-            
+
             iconEl.className = 'validation-icon fa-solid fa-circle-xmark';
             return false;
         } else {
@@ -157,12 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 iconEl.className = 'validation-icon fa-solid';
                 return true;
             }
-            
+
             inputEl.classList.remove('invalid');
             inputEl.classList.add('valid');
             errorDiv.classList.remove('visible');
             errorDiv.textContent = '';
-            
+
             iconEl.className = 'validation-icon fa-solid fa-circle-check';
             return true;
         }
@@ -173,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         // Ocultar banners anteriores
         hideBanner();
 
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok && result.success) {
                 showBanner(result.message, 'success');
                 form.reset();
-                
+
                 // Limpiar estados visuales de los inputs
                 formSchema.forEach(field => {
                     const inputEl = document.getElementById(`input-${field.name}`);
@@ -227,13 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const iconEl = inputEl.nextElementSibling;
                     iconEl.className = 'validation-icon fa-solid';
                 });
-                
+
                 // Recargar tabla de usuarios
                 loadUsersTable();
             } else {
                 // Manejar errores de servidor (generales o específicos)
                 showBanner(result.message || 'Error al registrar el usuario.', 'error');
-                
+
                 if (result.errors) {
                     // Si el servidor devolvió errores específicos por campo, los marcamos en la UI
                     Object.keys(result.errors).forEach(fieldName => {
@@ -274,18 +275,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function showBanner(message, type) {
         formMessage.textContent = '';
         formMessage.className = `form-message-banner ${type}`;
-        
+
         const icon = document.createElement('i');
         if (type === 'success') {
             icon.className = 'fa-solid fa-circle-check';
         } else {
             icon.className = 'fa-solid fa-circle-exclamation';
         }
-        
+
         formMessage.appendChild(icon);
         formMessage.appendChild(document.createTextNode(` ${message}`));
         formMessage.classList.remove('hidden');
-        
+
         // Auto ocultar después de 6 segundos si es éxito
         if (type === 'success') {
             setTimeout(() => {
@@ -306,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/users');
             if (!response.ok) throw new Error('No se pudieron obtener los usuarios.');
-            
+
             const users = await response.json();
             renderUsersTable(users);
         } catch (error) {
@@ -323,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderUsersTable(users) {
         usersTableBody.innerHTML = '';
-        
+
         if (users.length === 0) {
             usersTableBody.innerHTML = `
                 <tr class="empty-state">
@@ -340,11 +341,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         users.forEach(user => {
             const tr = document.createElement('tr');
-            
+
             // Construir los badges para los datos adicionales (JSONB)
             let extraDataHtml = '';
             const extraKeys = Object.keys(user.extra_data || {});
-            
+
             if (extraKeys.length > 0) {
                 extraDataHtml = '<div class="json-badge-container">';
                 extraKeys.forEach(key => {
@@ -360,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Construir el badge de estado de verificación
-            const statusHtml = user.is_verified 
+            const statusHtml = user.is_verified
                 ? `<span class="status-badge verified"><i class="fa-solid fa-circle-check"></i> Verificado</span>`
                 : `<span class="status-badge pending"><i class="fa-solid fa-clock"></i> Pendiente</span>`;
 
@@ -373,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${extraDataHtml}</td>
                 <td style="font-size: 0.8rem; white-space: nowrap;">${user.created_at}</td>
             `;
-            
+
             usersTableBody.appendChild(tr);
         });
     }
