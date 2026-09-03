@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+cd HT-Registrofrom flask import Flask, render_template, jsonify, request
 from fields import FormRegistry
 import database
 from config import Config
