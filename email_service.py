@@ -34,18 +34,25 @@ class ConsoleEmailProvider(EmailProvider):
 
 class SMTPEmailProvider(EmailProvider):
     """
-    Proveedor real: envía correos utilizando un servidor SMTP configurable.
+    Proveedor real: envía correos utilizando un servidor SMTP configurable (ej. Gmail SMTP).
     """
     def send_validation_email(self, to_email: str, name: str, token: str) -> bool:
         # Recuperar credenciales y configuración
-        smtp_server = Config.SMTP_SERVER
-        smtp_port = Config.SMTP_PORT
-        smtp_username = Config.SMTP_USERNAME
-        smtp_password = Config.SMTP_PASSWORD
-        sender_email = Config.SMTP_SENDER or smtp_username
+        smtp_server = Config.SMTP_SERVER.strip() if Config.SMTP_SERVER else "smtp.gmail.com"
+        try:
+            smtp_port = int(Config.SMTP_PORT) if Config.SMTP_PORT else 587
+        except (ValueError, TypeError):
+            smtp_port = 587
+
+        smtp_username = Config.SMTP_USERNAME.strip() if Config.SMTP_USERNAME else ""
+        smtp_password = Config.SMTP_PASSWORD.strip() if Config.SMTP_PASSWORD else ""
+        sender_email = (Config.SMTP_SENDER or smtp_username).strip()
         
         if not smtp_server or not smtp_username or not smtp_password:
-            print("ERROR: Configuración de SMTP incompleta. Revisa el archivo .env")
+            print("\n" + "=" * 60)
+            print("ERROR: Configuración de SMTP incompleta en .env.")
+            print("Asegúrate de definir SMTP_SERVER, SMTP_USERNAME y SMTP_PASSWORD.")
+            print("=" * 60 + "\n")
             return False
 
         validation_url = f"http://localhost:5000/api/verify?token={token}"
@@ -89,15 +96,33 @@ class SMTPEmailProvider(EmailProvider):
         message.attach(MIMEText(html, "html"))
 
         try:
-            # Conexión SMTP segura / TLS
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_username, smtp_password)
-                server.sendmail(sender_email, to_email, message.as_string())
-            print(f"Correo de verificación enviado exitosamente a {to_email} vía SMTP.")
+            if smtp_port == 465:
+                # Conexión directa SSL (ej. puerto 465)
+                with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15) as server:
+                    server.login(smtp_username, smtp_password)
+                    server.sendmail(sender_email, to_email, message.as_string())
+            else:
+                # Conexión estándar TLS / STARTTLS (ej. Gmail puerto 587)
+                with smtplib.SMTP(smtp_server, smtp_port, timeout=15) as server:
+                    server.starttls()
+                    server.login(smtp_username, smtp_password)
+                    server.sendmail(sender_email, to_email, message.as_string())
+
+            print(f"Correo de verificación enviado exitosamente a {to_email} vía SMTP ({smtp_server}:{smtp_port}).")
             return True
+        except smtplib.SMTPAuthenticationError as auth_err:
+            print("\n" + "=" * 60)
+            print(f"ERROR DE AUTENTICACIÓN SMTP: {auth_err}")
+            if "gmail.com" in smtp_server.lower():
+                print("NOTA PARA GMAIL:")
+                print("1. Google no permite iniciar sesión con tu contraseña habitual de Google.")
+                print("2. Debes generar una 'Contraseña de aplicación' de 16 caracteres:")
+                print("   -> Ve a tu Cuenta de Google -> Seguridad -> Verificación en dos pasos -> Contraseñas de aplicaciones.")
+                print("3. Pega esa clave de 16 caracteres en SMTP_PASSWORD en tu archivo .env.")
+            print("=" * 60 + "\n")
+            return False
         except Exception as e:
-            print(f"Error al enviar correo vía SMTP: {e}")
+            print(f"Error al enviar correo vía SMTP ({smtp_server}:{smtp_port}): {e}")
             return False
 
 class SendGridEmailProvider(EmailProvider):
@@ -194,6 +219,7 @@ class EmailProviderFactory:
     _providers = {
         "console": ConsoleEmailProvider,
         "smtp": SMTPEmailProvider,
+        "gmail": SMTPEmailProvider,
         "sendgrid": SendGridEmailProvider
     }
 
